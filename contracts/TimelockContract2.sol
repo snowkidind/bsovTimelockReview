@@ -66,8 +66,7 @@ contract TimelockContract2 {
     bool isPending;
 }
 
-    address constant tokenContract = 0x240E059d1B46159d74f103ab7dC63c0478DEE8Dc; // The BSOV Token contract
-
+    address public tokenContract;
     address public timelockRewardReserveAddress;
     ITimelockRewardReserve timelockRewardReserve;
     uint constant PRECISION = 100000000;
@@ -97,7 +96,8 @@ contract TimelockContract2 {
         uint256 time
 	);
 
-    constructor() public {
+    constructor( address _tokenContract ) public {
+      tokenContract = _tokenContract;
         owner = msg.sender;
         unfreezeDate = now + timeUntilUnlocked;
     }
@@ -214,7 +214,7 @@ function getIncomingAccountBalance(address _addr) public view returns (uint256 _
     return incomingAccountBalance[_addr];
 }
 
-    function receiveApproval(address _sender, uint256 _value, address _tokenContract, bytes memory _extraData) public {
+    function receiveApproval(address _sender, uint256 _value, address _tokenContract, bytes memory ) public {
         require(_tokenContract == tokenContract, "Can only deposit BSOV into this contract!");
         require(_value > 100, "Value must be greater than 100 Mundos, (0.00000100 BSOV)");
         require(ERC20Interface(tokenContract).transferFrom(_sender, address(this), _value), "Timelocking transaction failed");

@@ -63,7 +63,7 @@ const run = async () => {
     process.exit(1)
   }
 
-  const parameters1 = []
+  const parameters1 = [bsovAddress]
   const Contract1 = await hre.ethers.getContractFactory("TimelockContract2")
   const timelockContract2 = await Contract1.deploy(...parameters1)
   const timelockContract2Address = timelockContract2.target
