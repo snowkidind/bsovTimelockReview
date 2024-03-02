@@ -102,7 +102,8 @@ const run = async () => {
   // Initialize the first contract with the second address
   console.log('Init')
   const init = await timelockContract2.setTimelockRewardReserveAddress(timelockRewardsReserveContractAddress)
-  
+  // const init2 = await timelockContract2.setTimelockRewardReserveAddress(timelockRewardsReserveContractAddress)
+
   // A couple users locks his stuff in the contract
   const sendToLockA = 101000 * 10 ** 8 // just below max in a tx
   console.log('Step 1')

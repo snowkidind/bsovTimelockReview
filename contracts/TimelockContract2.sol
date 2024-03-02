@@ -112,7 +112,9 @@ contract TimelockContract2 {
     // This function sets the Timelock Reward Reserve contract's address. Can only be done by owner.
     // note must be done after reserve contract is initialized so cannot be constructed.
     // I'd recommend post initialization functions be named accordingly
+
     function setTimelockRewardReserveAddress(address _address) public onlyOwner {
+        require(timelockRewardReserveAddress == address(0), "Timelock address is already set.");
         timelockRewardReserveAddress = _address;
         timelockRewardReserve = ITimelockRewardReserve(timelockRewardReserveAddress);
     }
