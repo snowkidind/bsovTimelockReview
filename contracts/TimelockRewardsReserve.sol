@@ -1,5 +1,7 @@
 pragma solidity 0.5.9;
 
+import "hardhat/console.sol";
+
 /*
 The function of this smart-contract is to act as a Timelock Rewards reserve/treasury and distributor of timelocked tokens to users to timelock their BSOV Tokens.
 It interacts with a timelocking contract (timelockContract).
@@ -63,6 +65,7 @@ contract TimelockRewardsReserve {
     }
  
      // This function sets up the amount of tokens that are being rewarded in total, in each tier.
+     // Note: inconsistent use of numbers, exponents and decimals
     function setupTiers() internal {
         tiers[1] = 15000000000000;
         tiers[2] = 7500000000000;
@@ -88,6 +91,7 @@ contract TimelockRewardsReserve {
         if (tier == 7) return 0.015625 * 10**8;
         if (tier == 8) return 0.0078125 * 10**8;
         if (tier == 9) return 0.00390625 * 10**8;
+        // question: why are 9 and 10 the same?
         if (tier == 10) return 0.00390625 * 10**8;
         return 0;
     }
@@ -98,30 +102,69 @@ contract TimelockRewardsReserve {
     // If the amount in the timelock transaction exceeds to the next tier, it will calculate the correct amount from both tiers,
     // and it will advance to the next tier, and update the user's eligibleAmount.
     function updateEligibility(address user, uint256 amountTimelocked) external {
+        console.log('Args: %s, %i', user, amountTimelocked);
         require(msg.sender == address(timelockContract), "Not timelock contract");
-        require(amountTimelocked <= 14500000000000, "Cannot timelock more than 145,000 tokens at once");
+        require(amountTimelocked <= 145000 * 10 ** 8, "Cannot timelock more than 145,000 tokens at once");
+
+        // total timelocked appears to be user agnostic
         totalTimelocked = totalTimelocked.add(amountTimelocked);
         uint256 newEligibleAmount = 0;
-        uint256 nextTierThreshold = currentTier.mul(15000000000000);
+
+        // currentTier also appears to be user agnostic
+        uint256 nextTierThreshold = currentTier.mul(150000 * 10 ** 8);
+
+        // If the amt of tokens held in the contract, including the current deposit are 
+        // (less than the next tier thresh.) or beyond tier system
+        // block one is do this when tier doesnt change
+        console.log('nextTierThreshold    ', nextTierThreshold);
+        console.log('tier:                ', currentTier);
         if (totalTimelocked < nextTierThreshold || currentTier == 10) {
+            console.log('-> pipeA');
             uint256 rewardRatio = getRewardRatioForTier(currentTier);
+
+            console.log('rewardRatio          ', rewardRatio);
+
             newEligibleAmount = amountTimelocked.mul(rewardRatio).div(10**8);
+            console.log('newEligibleAmount    ', newEligibleAmount);
+            // add this to current tier acc
             totalTimelockedInTier[currentTier] = totalTimelockedInTier[currentTier].add(amountTimelocked);
+            console.log('totalTimelockedInTier', totalTimelockedInTier[currentTier]);
+            // store amount in current tier, per user
+            // this array is used in no other function but serves the purpose to hold the intermediate values
+            // of what the user holds in each tier. The sum of these is the user's eligible amount.
             userTimelockedInTier[user][currentTier] = userTimelockedInTier[user][currentTier].add(amountTimelocked);
-        } else {
+            console.log('userTimelockedInTier ', userTimelockedInTier[user][currentTier]);
+        } 
+        // else the tier will increase 
+        else {
+            console.log('-> pipeB');
+            // Since the tier changes the amount must be distributed into the different tiers, 
+            // first the old tier is calculated then the new tier is calculated 
+            // finally the eligible amount is added to the user
             uint256 amountInCurrentTier = nextTierThreshold.sub(totalTimelocked.sub(amountTimelocked));
             uint256 rewardRatioCurrent = getRewardRatioForTier(currentTier);
             newEligibleAmount = amountInCurrentTier.mul(rewardRatioCurrent).div(10**8);
+            console.log('newEligibleAmountA    ', newEligibleAmount);
+
             totalTimelockedInTier[currentTier] = totalTimelockedInTier[currentTier].add(amountInCurrentTier);
             userTimelockedInTier[user][currentTier] = userTimelockedInTier[user][currentTier].add(amountInCurrentTier);
+            
+            console.log('user in tier: %i %i', userTimelockedInTier[user][currentTier], currentTier);
+            
             currentTier++;
+
             uint256 amountInNextTier = amountTimelocked.sub(amountInCurrentTier);
             uint256 rewardRatioNext = getRewardRatioForTier(currentTier);
             newEligibleAmount = newEligibleAmount.add(amountInNextTier.mul(rewardRatioNext).div(10**8));
+            console.log('newEligibleAmountB    ', newEligibleAmount);
+
             totalTimelockedInTier[currentTier] = totalTimelockedInTier[currentTier].add(amountInNextTier);
             userTimelockedInTier[user][currentTier] = userTimelockedInTier[user][currentTier].add(amountInNextTier);
+
+            console.log('user in tier: %i %i', userTimelockedInTier[user][currentTier], currentTier);
         }
         eligibleAmount[user] = eligibleAmount[user].add(newEligibleAmount);
+        console.log('eligibleAmount    ', eligibleAmount[user]);
         totalEligibleAmount = totalEligibleAmount.add(newEligibleAmount);
     }
     
