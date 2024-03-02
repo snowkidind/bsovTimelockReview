@@ -1,6 +1,8 @@
 
 pragma solidity 0.5.9;
 
+import "hardhat/console.sol";
+
 // Sovcube TimeLock, & Slow Release & Send Timelocked Tokens Contract
 // https://SovCube.com
 // 
@@ -108,6 +110,8 @@ contract TimelockContract2 {
     }
 
     // This function sets the Timelock Reward Reserve contract's address. Can only be done by owner.
+    // note must be done after reserve contract is initialized so cannot be constructed.
+    // I'd recommend post initialization functions be named accordingly
     function setTimelockRewardReserveAddress(address _address) public onlyOwner {
         timelockRewardReserveAddress = _address;
         timelockRewardReserve = ITimelockRewardReserve(timelockRewardReserveAddress);
@@ -215,17 +219,19 @@ contract TimelockContract2 {
     }
     
     function receiveApproval(address _sender, uint256 _value, address _tokenContract, bytes memory ) public {
+
+        require(timelockRewardReserveAddress != address(0), "Cannot proceed. Not initialized.");
         require(_tokenContract == tokenContract, "Can only deposit BSOV into this contract!");
         require(_value > 100, "Value must be greater than 100 Mundos, (0.00000100 BSOV)");
         require(ERC20Interface(tokenContract).transferFrom(_sender, address(this), _value), "Timelocking transaction failed");
 
+        // deduct a percent from the amount sent and update balances
+        // Question: this percent is not burned using a burn mechanism, where does it go?
         uint _adjustedValue = _value.mul(99).div(100);
         balance[_sender] += _adjustedValue;
+
         emit TokensFrozen(_sender, _adjustedValue, now);
-        if (_sender != timelockRewardReserveAddress) {
-            if (timelockRewardReserveAddress != address(0)) {
-                timelockRewardReserve.updateEligibility(_sender, _adjustedValue);
-            }
-        }
+        timelockRewardReserve.updateEligibility(_sender, _adjustedValue);
+        
     }  
 }

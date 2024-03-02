@@ -78,16 +78,16 @@ const run = async () => {
   console.log("TimelockRewardsReserve deployed to: " + timelockRewardsReserveContractAddress + ' on ' + network)
 
   const step1 = await bsovContract.connect(owner).approveAndCall(timelockContract2Address, bsovBalance, '0x')
- console.log(step1)
+ // console.log(step1)
 
   const rewardsFunctions = await getFunctionDefinitionsFromAbi(timelockReserveRewardsAbi, ethers)
   // console.log(rewardsFunctions)
   
   const currentTier = await timelockRewardsReserveContract.currentTier()
-  console.log('tier:', currentTier)
+  // console.log('tier:', currentTier)
 
   const tiers = await timelockRewardsReserveContract.tiers(2)
-  console.log('tiers:', tiers)
+  // console.log('tiers:', tiers)
 
 
   const timelockFunctions = await getFunctionDefinitionsFromAbi(timelockContract2Abi, ethers)
