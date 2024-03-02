@@ -127,6 +127,10 @@ contract TimelockContract2 {
     }
     
     // This function sends timelocked tokens to one or several addresses' "Untaken Incoming Balance".
+    // note: msg.sender is the rewardsReserve contract
+    // note: the use of for loops in solidity is not a great practice and should be avoided
+    // note: if the contract call is intended for a single user, why use arrays in the first place?
+    // question: does this require being called from the other contract?
     function markTimelockedTokensForSend(address[] memory _receivers, uint[] memory _amounts) public {
         require(_receivers.length == _amounts.length, "Mismatched array lengths");
     
@@ -135,26 +139,35 @@ contract TimelockContract2 {
             totalAmount += _amounts[i];
         }
     
+        // interesting message to send to the other contract? maybe im confused...
         require(balance[msg.sender] >= totalAmount, "Insufficient timelocked balance. You have to timelock tokens before sending timelocked tokens.");
     
         for (uint i = 0; i < _receivers.length; i++) {
             address receiver = _receivers[i];
             uint amount = _amounts[i];
-            
+            console.log('adding ', amount, receiver);
             pendingIncoming[receiver].amount += amount;
             pendingIncoming[receiver].from = msg.sender;
             pendingIncoming[receiver].isPending = true;
     
             emit sendTimelockedMarked(msg.sender, receiver, amount);
         }
-        balance[msg.sender] -= totalAmount;
+        console.log('totalAmount', totalAmount);
+
+        console.log('msg.sender', msg.sender);
+
+        // reduces the balance of the reserve contract, who, appears to be calling this function?
+        // but the function is public with no guards
+        balance[msg.sender] -= totalAmount; 
     }
 
     // This function accepts Untaken Incoming Balance - the Lock Time will reset for the Incoming Tokens Account.
     function acceptIncomingTokens() public {
         require(pendingIncoming[msg.sender].isPending, "You have no Incoming Tokens to accept!");
         incomingTimelockStruct memory incomingTokens = pendingIncoming[msg.sender];
+        console.log('incomingAccountBalance', incomingAccountBalance[msg.sender]);
         incomingAccountBalance[msg.sender] += incomingTokens.amount; 
+        console.log('incomingAccountBalance', incomingAccountBalance[msg.sender]);
         incomingAccountLockExpiration[msg.sender] = now + resetIncomingAccountTimeLeft; // When Incoming Tokens are accepted, the unlock date resets to the days specified in resetIncomingAccountTimeLeft.
         delete pendingIncoming[msg.sender]; 
         emit TokensClaimed(msg.sender, incomingTokens.amount);
@@ -184,8 +197,6 @@ contract TimelockContract2 {
     }
 
     // This function gets the balance of the regular account.
-    // generally speaking the more privacy you can build in the better, 
-    // recommend using msg.sender instead of _addr
     function getBalance(address _addr) public view returns (uint256 _balance) {
         return balance[_addr];
     }

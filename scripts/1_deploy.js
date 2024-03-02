@@ -75,6 +75,10 @@ const run = async () => {
   console.log('Transferred ' + d(bsovBalance, bsovDecimals) + ' BSOV from whale wallets.')
 
   console.log("The current deployer address is: " + owner.address)
+  console.log("User 1: " + user1.address)
+  console.log("User 2: " + user2.address)
+  console.log("User 3: " + user3.address)
+
 
   const exists = await fs.existsSync(__dirname + '/' + network)
   if (!exists) {
@@ -127,25 +131,64 @@ const run = async () => {
 
   // A couple users locks his stuff in the contract
   const sendToLockA = 101000 * 10 ** 8 // just below max in a tx
-  console.log('Step 1')
+  console.log('\nStep 1, user 1')
   const step1 = await bsovContract.connect(user1).approveAndCall(timelockContract2Address, sendToLockA, '0x')
   
   const sendToLockB = 60000 * 10 ** 8 // blast thresh by a little
-  console.log('Step 1')
+  console.log('\nStep 1, user 2')
   const step2 = await bsovContract.connect(user2).approveAndCall(timelockContract2Address, sendToLockB, '0x')
 
   const sendToLockC = 1000 * 10 ** 8 // blast thresh by a little
-  console.log('Step 1')
+  console.log('\nStep 1, user 1')
   const step3 = await bsovContract.connect(user1).approveAndCall(timelockContract2Address, sendToLockC, '0x')
 
   const sent = sendToLockA + sendToLockB + sendToLockC
-  console.log('total sent:', sent)
+  console.log('\ntotal sent:', sent)
+
+  const user1Deposits = sendToLockA + sendToLockC
+  console.log('user 1 deposits:' + user1Deposits)
+  // const ea2 = await timelockRewardsReserveContract.eligibleAmount(user2.address)
+  // console.log('ea2', ea2)
+
+  
+  // ok weve seeded the contract and staked our stuff
+
+  const balanceCall1 = await timelockContract2.getBalance(user1.address)
+  console.log('bc1', balanceCall1)
 
   const ea1 = await timelockRewardsReserveContract.eligibleAmount(user1.address)
-  console.log('ea1', ea1)
+  console.log('User 1 timelock Balance, before claim', ea1)
+  // const p1 = await timelockContract2.pendingIncoming(user1.address)
+  //console.log(p1)
 
-  const ea2 = await timelockRewardsReserveContract.eligibleAmount(user2.address)
-  console.log('ea2', ea2)
+  // note balance on timelock doesnt appear to change during this call
+  const ready = await timelockRewardsReserveContract.connect(user1).claimTimelockRewards()
+
+  const ea2 = await timelockRewardsReserveContract.eligibleAmount(user1.address)
+  console.log('User 1 timelock Balance, after claim', ea2)
+
+  // const p2 = await timelockContract2.pendingIncoming(user1.address)
+  //console.log(p2)
+
+  const accept = await timelockContract2.connect(user1).acceptIncomingTokens()
+  const balanceCall2 = await timelockContract2.getBalance(user1.address)
+  console.log('bc2', balanceCall2)
+  console.log()
+
+
+  // withdrawal (early)
+
+
+
+  // const wd1 = await timelockContract2.withdraw(balanceCall2, true)
+  // console.log(wd1)
+  const wd2 = await timelockContract2.withdraw(balanceCall2, false)
+  console.log(wd2)
+
+
+
+
+
 
   const rewardsFunctions = await getFunctionDefinitionsFromAbi(timelockReserveRewardsAbi, ethers)
   // console.log(rewardsFunctions)
