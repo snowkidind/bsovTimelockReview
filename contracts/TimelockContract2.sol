@@ -1,6 +1,9 @@
 
 pragma solidity 0.5.9;
 
+// Recommend updating solidity
+// use of now deprecated, should be block.timestamp 
+
 import "hardhat/console.sol";
 
 // Sovcube TimeLock, & Slow Release & Send Timelocked Tokens Contract
@@ -42,16 +45,20 @@ library SafeMath {
     }
 }
 
+// Only two functions here being used are transfer and transferFrom, 
+// could delete all else to save a couple wei on the tx
+// also this is typically named IERC20
 contract ERC20Interface {
-    function totalSupply() public view returns(uint);
-    function balanceOf(address tokenOwner) public view returns(uint balance);
-    function allowance(address tokenOwner, address spender) public view returns(uint remaining);
+    // function totalSupply() public view returns(uint);
+    // function balanceOf(address tokenOwner) public view returns(uint balance);
+    // function allowance(address tokenOwner, address spender) public view returns(uint remaining);
     function transfer(address to, uint tokens) public returns(bool success);
-    function approve(address spender, uint tokens) public returns(bool success);
+    // function approve(address spender, uint tokens) public returns(bool success);
     function transferFrom(address from, address to, uint tokens) public returns(bool success);
-    event Transfer(address indexed from, address indexed to, uint tokens);
-    event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
+    // event Transfer(address indexed from, address indexed to, uint tokens);
+    // event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
+
 interface ITimelockRewardReserve {
     function updateEligibility(address user, uint256 amount) external;
 }
@@ -177,6 +184,8 @@ contract TimelockContract2 {
     }
 
     // This function gets the balance of the regular account.
+    // generally speaking the more privacy you can build in the better, 
+    // recommend using msg.sender instead of _addr
     function getBalance(address _addr) public view returns (uint256 _balance) {
         return balance[_addr];
     }
@@ -226,14 +235,18 @@ contract TimelockContract2 {
         require(_tokenContract == tokenContract, "Can only deposit BSOV into this contract!");
         require(_value > 100, "Value must be greater than 100 Mundos, (0.00000100 BSOV)");
         require(ERC20Interface(tokenContract).transferFrom(_sender, address(this), _value), "Timelocking transaction failed");
-
-        // deduct a percent from the amount sent and update balances
-        // Question: this percent is not burned using a burn mechanism, where does it go?
-        uint _adjustedValue = _value.mul(99).div(100);
-        balance[_sender] += _adjustedValue;
-
-        emit TokensFrozen(_sender, _adjustedValue, now);
-        timelockRewardReserve.updateEligibility(_sender, _adjustedValue);
         
+        // Question: this percent is not burned using a burn mechanism, where does it go?
+        // does percentage end up in the same account as the seed transaction?
+        uint _adjustedValue = _value.mul(99).div(100);
+
+        balance[_sender] += _adjustedValue;
+        emit TokensFrozen(_sender, _adjustedValue, now);
+
+        // About the seed transaction: if this is for the greater good shouldnt it not be taxed 1%?
+        // also the seed transaction is kind of awkward and relies on a seperate transaction. (see deploy.js)
+         if (_sender == timelockRewardReserveAddress) return; // ignore seed transaction
+        timelockRewardReserve.updateEligibility(_sender, _adjustedValue);
+
     }  
 }

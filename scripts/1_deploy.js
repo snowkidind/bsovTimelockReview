@@ -14,7 +14,9 @@ const bsovAbi = require('../utils/bsovAbi.json')
 const bsovWhale = '0x4051963047353936096E1D4092D48e1b7386e4DE'
 const bsovWhale2 = '0x047714E2E6c2386e92f7e15a48Fa900e51Cb19d6'
 const bsovWhale3 = '0x13Fc4Bb93d54e6Ed4cf531D8836cA39162A51284'
-
+const bsovWhale4 = '0x5468bd200cd52405556223ec669D3f04e64465f8'
+const bsovWhale5 = '0x894129246dE1963e14B39e06c24203FDb904EAB7'
+const bsovWhale6 = '0x71fdc6E7C5b76ad7b927abF8B14b9417364Ec2A2'
 
 const timelockContract2Abi = require('../utils/timelockContract2.json')
 const timelockReserveRewardsAbi = require('../utils/timelockReserveRewards.json')
@@ -54,18 +56,21 @@ const run = async () => {
   await getFunds(bsovWhale, owner)
   await getFunds(bsovWhale2, owner)
   await getFunds(bsovWhale3, owner)
+  await getFunds(bsovWhale4, owner)
+  await getFunds(bsovWhale5, owner)
+  await getFunds(bsovWhale6, owner)
 
   const bsovContract = new ethers.Contract(bsovAddress, bsovAbi, provider)
   const bsovDecimals = parseInt(await bsovContract.decimals())
 
   const bsovBalance = await bsovContract.balanceOf(owner.address)
-  if (Number(d(bsovBalance.toString(), bsovDecimals)) < 500000) {
+  if (Number(d(bsovBalance.toString(), bsovDecimals)) < 600000) {
     console.log('Needs more BSOV to perform tests.')
     process.exit()
   }
 
-  await bsovContract.connect(owner).transfer(user1.address, 250000 * 10 ** 8)
-  await bsovContract.connect(owner).transfer(user2.address, 250000 * 10 ** 8)
+  await bsovContract.connect(owner).transfer(user1.address, 200000 * 10 ** 8)
+  await bsovContract.connect(owner).transfer(user2.address, 100000 * 10 ** 8)
 
   console.log('Transferred ' + d(bsovBalance, bsovDecimals) + ' BSOV from whale wallets.')
 
@@ -103,6 +108,22 @@ const run = async () => {
   console.log('Init')
   const init = await timelockContract2.setTimelockRewardReserveAddress(timelockRewardsReserveContractAddress)
   // const init2 = await timelockContract2.setTimelockRewardReserveAddress(timelockRewardsReserveContractAddress)
+
+  // owner seeds contract with 300k rewards tokens
+  // the issue here is that since theres a tax the owner must send a percent more than expected to seed. 
+  // then call contract calculating a lower number:
+  // Recommend: this design has flaws and is not tight, consider redoing this:
+  // 1 dont tax owner funds for seeding
+  // 2 instead of using the same approve and call method maybe have a separate call for this
+  const seedFund = 300000 * 10 ** 8 // just below max in a tx
+  const seedFundPerc = 30303030303031
+  console.log('Seed')
+
+  // first the owner sends a percent to the contract for rewards
+  await bsovContract.connect(owner).transfer(timelockRewardsReserveContractAddress, seedFundPerc)
+  // then the owner timelocks the seed funds. 
+  const seed = await timelockRewardsReserveContract.connect(owner).ownerTimelockTokens(seedFund, '0x')
+
 
   // A couple users locks his stuff in the contract
   const sendToLockA = 101000 * 10 ** 8 // just below max in a tx
