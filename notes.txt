@@ -1,0 +1,38 @@
+Thanks for getting back to me!
+
+So Contract1 a.k.a OriginalTimelockContract is the old contract from 2019, with over 1 million BSOV timelocked, and we aren't going to mess with that one.
+
+We are working with Contract2 and RewardsReserve contract.
+
+You can see on testnet.sovcube.com (Use Goerli Testnet through Metamask) how the user-interface is, but I can tell you the flow to make it easier to understand:
+The user has a Regular Account and an Incoming Tokens Account. - When a user timelocks tokens, they are sent to regular account immediately. When a user claims a Timelock Reward, or if someone sends them Locked Tokens, they are sent to "Untaken Incoming Tokens", and a user has to "Accept Incoming Tokens" to receive tokens to the "Incoming Tokens Account".
+
+Timelocking
+1. User buys BSOV Token.
+2. User Timelocks their BSOV tokens using the approveAndCall method in the BSOV contract and enters Contract2Address+Amount.
+3. The approveAndCall function in BSOV contract then interacts with Contract2 through the receiveApproval function in Contract2.
+_____________________________________
+Timelock Rewards
+4. The receiveApproval function then calls the updateEligibility function in the timelockRewardReserve contract (which is set by owner by calling setTimelockRewardReserveAddress)
+5. updateEligibility function calculates the amount that the user should be rewarded according to the current tier, and then updates eligibleAmount a.k.a Unclaimed Timelock Rewards.
+
+Claiming Rewards and Accepting Incoming Tokens
+_______________________________________
+6. The user has to "Claim Reward" to receive Unclaimed Timelock Rewards to "Untaken Incoming Tokens".
+7. The user has to "Accept Incoming Tokens" to receive tokens into their "Incoming Tokens Account", where the lock time will reset to 1000 days.
+_______________________________________
+Yes,
+0x26946ada5ecb57f3a1f91605050ce45c482c9eb1 is the correct address for BSOV on mainnet.
+
+________________________________________
+_totalSupply is max supply of 21 million (like bitcoin)
+totalSupply is (max supply - burnt tokens)
+
+________________________________________
+Yes, BSOV burns 1% of each transaction without the ability for the owner to bypass or whitelist burn, like WHACKD.
+
+_________________________________________
+
+
+
+I hope I answered your questions! 😁Let me know if something is unclear.
