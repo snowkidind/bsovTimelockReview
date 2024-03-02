@@ -63,6 +63,11 @@ const run = async () => {
     process.exit(1)
   }
 
+  let sendToLock = balance
+  if (Number(balance) > 145000) {
+    sendToLock = 136000n
+  }
+
   const parameters1 = [bsovAddress]
   const Contract1 = await hre.ethers.getContractFactory("TimelockContract2")
   const timelockContract2 = await Contract1.deploy(...parameters1)
@@ -77,7 +82,9 @@ const run = async () => {
   await fs.writeFileSync(__dirname + '/' + network + '/TimelockRewardsReserve.json', JSON.stringify({ contract: timelockRewardsReserveContractAddress }, null, 4))
   console.log("TimelockRewardsReserve deployed to: " + timelockRewardsReserveContractAddress + ' on ' + network)
 
-  const step1 = await bsovContract.connect(owner).approveAndCall(timelockContract2Address, bsovBalance, '0x')
+  const init = await timelockContract2.setTimelockRewardReserveAddress(timelockRewardsReserveContractAddress)
+
+  const step1 = await bsovContract.connect(owner).approveAndCall(timelockContract2Address, sendToLock, '0x')
  // console.log(step1)
 
   const rewardsFunctions = await getFunctionDefinitionsFromAbi(timelockReserveRewardsAbi, ethers)
