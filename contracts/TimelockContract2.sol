@@ -138,7 +138,12 @@ contract TimelockContract2 {
         for (uint i = 0; i < _amounts.length; i++) {
             totalAmount += _amounts[i];
         }
-    
+
+    // Issue: When the contract is unseeded, any attempt by consumer to claim timelock tokens will fail
+    // this needs an on/off fund is seeded switch before allowing any deposit.
+    // more weirdness where the timelock contract is the message sender, and it has no balance when not seeded
+    // console.log('bms', balance[msg.sender], 'ta', totalAmount, msg.sender);
+
         // interesting message to send to the other contract? maybe im confused...
         require(balance[msg.sender] >= totalAmount, "Insufficient timelocked balance. You have to timelock tokens before sending timelocked tokens.");
     
@@ -152,9 +157,9 @@ contract TimelockContract2 {
     
             emit sendTimelockedMarked(msg.sender, receiver, amount);
         }
-        console.log('totalAmount', totalAmount);
+        // console.log('totalAmount', totalAmount);
 
-        console.log('msg.sender', msg.sender);
+        // console.log('msg.sender', msg.sender);
 
         // reduces the balance of the reserve contract, who, appears to be calling this function?
         // but the function is public with no guards
@@ -165,9 +170,9 @@ contract TimelockContract2 {
     function acceptIncomingTokens() public {
         require(pendingIncoming[msg.sender].isPending, "You have no Incoming Tokens to accept!");
         incomingTimelockStruct memory incomingTokens = pendingIncoming[msg.sender];
-        console.log('incomingAccountBalance', incomingAccountBalance[msg.sender]);
+        // console.log('incomingAccountBalance', incomingAccountBalance[msg.sender]);
         incomingAccountBalance[msg.sender] += incomingTokens.amount; 
-        console.log('incomingAccountBalance', incomingAccountBalance[msg.sender]);
+        // console.log('incomingAccountBalance', incomingAccountBalance[msg.sender]);
         incomingAccountLockExpiration[msg.sender] = now + resetIncomingAccountTimeLeft; // When Incoming Tokens are accepted, the unlock date resets to the days specified in resetIncomingAccountTimeLeft.
         delete pendingIncoming[msg.sender]; 
         emit TokensClaimed(msg.sender, incomingTokens.amount);
@@ -213,7 +218,8 @@ contract TimelockContract2 {
    
     // This function gets the time left (in seconds) of the Lock Time of the Regular Account   
     function getTimeLeft() public view returns (uint256 _timeLeft) {
-        require(unfreezeDate > now, "Tokens are unlocked and ready for withdrawal");
+         if (now > unfreezeDate ) return 0; 
+        // require(unfreezeDate > now, "Tokens are unlocked and ready for withdrawal");
         return unfreezeDate - now;
     } 
 
